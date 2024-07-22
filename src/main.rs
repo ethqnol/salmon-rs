@@ -8,10 +8,12 @@ use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
 use token::TokenType;
+mod scope;
 mod ast;
 mod interpreter;
 mod error;
 mod lexer;
+mod function;
 mod parser;
 mod token;
 mod object;
@@ -73,13 +75,13 @@ fn main() {
                 println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
             }
         }
-        "parse" => {
+        "interp" => {
             if !file_contents.is_empty() {
                 let mut lexer: Lexer = Lexer::new(file_contents.as_str());
                 lexer.tokenize();
 
                 let mut parser: Parser = Parser::new(lexer.get_tokens());
-                let interpreter = interpreter::Interpreter::new();
+                let mut interpreter = interpreter::Interpreter::new();
                 match parser.parse_expr() {
                     Ok(expr) => {
                         match interpreter.evaluate(expr) {
@@ -101,6 +103,57 @@ fn main() {
                 }
             }
         }
+        
+        "interp-expr" => {
+            if !file_contents.is_empty() {
+                let mut lexer: Lexer = Lexer::new(file_contents.as_str());
+                lexer.tokenize();
+
+                let mut parser: Parser = Parser::new(lexer.get_tokens());
+                let mut interpreter = interpreter::Interpreter::new();
+                match parser.parse_expr() {
+                    Ok(expr) => {
+                        match interpreter.evaluate(expr) {
+                            Ok(obj) => {
+                                println!("{}", obj);
+                            }
+                            Err(e) => {
+                                writeln!(io::stderr(), "{}", e).unwrap();
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        writeln!(io::stderr(), "{}", e).unwrap();
+                    }
+                }
+                
+                if parser.error_count > 0 {
+                    exit(65);
+                }
+            }
+        }
+        
+        "parse" => {
+            if !file_contents.is_empty() {
+                let mut lexer: Lexer = Lexer::new(file_contents.as_str());
+                lexer.tokenize();
+
+                let mut parser: Parser = Parser::new(lexer.get_tokens());
+                let ast = parser.parse();
+                match ast {
+                    Ok(ast) => {
+                        println!("{}", AstPrinter::print_stmt(ast));
+                    }
+                    Err(e) => {
+                        writeln!(io::stderr(), "{}", e).unwrap();
+                    }
+                }
+                if parser.error_count > 0 {
+                    exit(65);
+                }
+            }
+        }
+        
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
 

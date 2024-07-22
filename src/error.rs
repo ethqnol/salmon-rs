@@ -29,22 +29,27 @@ impl fmt::Display for ParserError {
 
 
 #[derive(Debug, Clone)]
-pub struct RuntimeError {
-    pub token : Token,
-    pub msg : String,
-}
-
-impl RuntimeError {
-    pub fn new(token: Token, msg: String) -> RuntimeError {
-        RuntimeError {
-            token,
-            msg,
-        }
-    }
+pub enum RuntimeError {
+    InvalidBinaryOperation(Token, String),
+    InvalidUnaryOperation(Token, String),
+    InvalidOperandType(Token, String),
+    UndefinedVariable(Token),
+    InvalidLiteral(Token, String),
+    InvalidLogicalOperation(Token, String),
+    InvalidFunctionCall(Token, String),
+    
 }
 
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "RuntimeError: {} at {}", self.msg, self.token.lexeme)
+        match self {
+            RuntimeError::InvalidBinaryOperation(token, msg) => write!(f, "RuntimeError: Invalid Binary Operation at {}. {}", token.lexeme, msg),
+            RuntimeError::InvalidUnaryOperation(token, msg) => write!(f, "RuntimeError: Invalid Unary Operation at {}. {}", token.lexeme, msg),
+            RuntimeError::InvalidOperandType(token, msg) => write!(f, "RuntimeError: Invalid Operand Type at {}. {}", token.lexeme, msg),
+            RuntimeError::UndefinedVariable(token) => write!(f, "RuntimeError: Undefined Variable at {}.", token.lexeme),
+            RuntimeError::InvalidLiteral(token, msg) => write!(f, "RuntimeError: Invalid Literal at {}. {}", token.lexeme, msg),
+            RuntimeError::InvalidLogicalOperation(token, msg) => write!(f, "RuntimeError: Invalid Logical Operation at {}. {}", token.lexeme, msg),
+            RuntimeError::InvalidFunctionCall(token, msg) => write!(f, "RuntimeError: Invalid Function Call at {}. {}", token.lexeme, msg),
+        }
     }
 }

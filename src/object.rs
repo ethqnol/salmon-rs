@@ -1,7 +1,8 @@
 use std::fmt::Display;
+use crate::function::Function;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Object {
     Boolean {
         value: bool,
@@ -13,6 +14,10 @@ pub enum Object {
     String {
         value: String,
     },
+    
+    Callable {
+        func : Function
+    }
 }
 
 impl Display for Object {
@@ -22,6 +27,7 @@ impl Display for Object {
             Object::Null => write!(f, "null"),
             Object::Number { value } => write!(f, "{}", value),
             Object::String { value } => write!(f, "{}", value),
+            Object::Callable { func } => write!(f, "{}", func),
         }
     }
 }
