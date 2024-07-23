@@ -80,11 +80,11 @@ impl expr::Visitor<String> for AstPrinter {
     fn visit_call(&mut self, callee: &Box<Expr>, paren: &Token, arguments: &Vec<Expr>) -> String {
         let mut call_expr = String::from(format!("({}", callee.accept(self)));
         call_expr.push_str(" (");
-        call_expr.push_str(&paren.lexeme);
         for arg in arguments {
-            call_expr.push_str(&format!(" {}", arg.accept(self)));
+            call_expr.push(' ');
+            call_expr.push_str(&format!("{}", arg.accept(self)));
         }
-        call_expr.push_str(")");
+        call_expr.push_str(" )");
         call_expr
     }
     
@@ -124,7 +124,7 @@ impl stmt::Visitor<String> for AstPrinter {
         class_stmt
     }
     
-    fn visit_expression(&mut self, expr: &Box<Expr>) -> String {
+    fn visit_expression(&mut self, expr: &Expr) -> String {
         format!("(; {})", expr.accept(self))
     }
     
@@ -133,7 +133,7 @@ impl stmt::Visitor<String> for AstPrinter {
         for param in params {
             function_stmt.push_str(&format!(" {}", param.lexeme));
         }
-        function_stmt.push_str(") ");
+        function_stmt.push_str(" ) ");
         for mut stmt in body.clone() {
             function_stmt.push_str(&format!("{}", stmt.accept(self)));
         }
@@ -141,7 +141,7 @@ impl stmt::Visitor<String> for AstPrinter {
         function_stmt
     }
     
-    fn visit_if(&mut self, condition: &Box<Expr>, then_branch: &Box<Stmt>, else_branch: &Option<Box<Stmt>>) -> String {
+    fn visit_if(&mut self, condition: &Expr, then_branch: &Stmt, else_branch: &Option<Box<Stmt>>) -> String {
         let mut if_stmt = String::from("(if ");
         if_stmt.push_str(&format!("{}", condition.accept(self)));
         if_stmt.push_str(&format!("{}", then_branch.clone().accept(self)));
@@ -152,7 +152,7 @@ impl stmt::Visitor<String> for AstPrinter {
         if_stmt
     }
     
-    fn visit_print(&mut self, expr: &Box<Expr>) -> String {
+    fn visit_print(&mut self, expr: &Expr) -> String {
         format!("(print {})", expr.accept(self))
     }
     
@@ -172,7 +172,7 @@ impl stmt::Visitor<String> for AstPrinter {
         format!("(var {} {})", name.lexeme, initializer.clone().unwrap().accept(self))
     }
     
-    fn visit_while(&mut self, condition: &Box<Expr>, body: &Box<Stmt>) -> String {
+    fn visit_while(&mut self, condition: &Expr, body: &Stmt) -> String {
         let mut while_stmt = String::from("(while ");
         while_stmt.push_str(&format!("{}", condition.accept(self)));
         while_stmt.push_str(&format!("{}", body.clone().accept(self)));

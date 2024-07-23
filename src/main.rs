@@ -80,19 +80,10 @@ fn main() {
                 let mut lexer: Lexer = Lexer::new(file_contents.as_str());
                 lexer.tokenize();
 
-                let mut parser: Parser = Parser::new(lexer.get_tokens());
+                let mut parser : Parser = Parser::new(lexer.get_tokens());
                 let mut interpreter = interpreter::Interpreter::new();
-                match parser.parse_expr() {
-                    Ok(expr) => {
-                        match interpreter.evaluate(expr) {
-                            Ok(obj) => {
-                                println!("{}", obj);
-                            }
-                            Err(e) => {
-                                writeln!(io::stderr(), "{}", e).unwrap();
-                            }
-                        }
-                    }
+                match parser.parse() {
+                    Ok(stmts) => { interpreter.interpret(&stmts); }
                     Err(e) => {
                         writeln!(io::stderr(), "{}", e).unwrap();
                     }
@@ -113,7 +104,7 @@ fn main() {
                 let mut interpreter = interpreter::Interpreter::new();
                 match parser.parse_expr() {
                     Ok(expr) => {
-                        match interpreter.evaluate(expr) {
+                        match interpreter.evaluate(&expr) {
                             Ok(obj) => {
                                 println!("{}", obj);
                             }

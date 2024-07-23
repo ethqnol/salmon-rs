@@ -61,6 +61,8 @@ impl Parser {
             self.for_statement()
         } else if self.match_token(TokenType::WHILE) {
             self.while_statement()
+        } else if self.match_token(TokenType::RETURN){
+            self.return_statement()
         } else if self.match_token(TokenType::LEFT_BRACE) {
             Ok(Stmt::Block {
                 stmts: self.block()?,
@@ -82,7 +84,7 @@ impl Parser {
         )?;
         self.consume(TokenType::SEMICOLON, "Expect ';' after value.".to_string())?;
         Ok(Stmt::Print {
-            expr: Box::new(expr),
+            expr,
         })
     }
 
@@ -101,7 +103,7 @@ impl Parser {
         }
 
         Ok(Stmt::If {
-            condition: Box::new(condition),
+            condition,
             then_branch,
             else_branch,
         })
@@ -121,14 +123,28 @@ impl Parser {
         let body = Box::new(self.statement()?);
 
         Ok(Stmt::While {
-            condition: Box::new(condition),
+            condition,
             body,
+        })
+    }
+    
+    fn return_statement(&mut self) -> Result<Stmt, ParserError> {
+        let keyword = self.view_prev().unwrap().clone();
+        let value = if !self.check_type(TokenType::SEMICOLON) {
+            Some(self.parse_expr()?)
+        } else {
+            None
+        };
+        self.consume(TokenType::SEMICOLON, "Expect ';' after return value.".to_string())?;
+        Ok(Stmt::Return {
+            keyword,
+            value,
         })
     }
 
     fn for_statement(&mut self) -> Result<Stmt, ParserError> {
         self.consume(TokenType::LEFT_PAREN, "Expect '(' after 'for'.".to_string())?;
-        
+
         let initializer = if self.match_token(TokenType::SEMICOLON) {
             None
         } else if self.match_token(TokenType::VAR) {
@@ -142,7 +158,7 @@ impl Parser {
         } else {
             None
         };
-        
+
         self.consume(
             TokenType::SEMICOLON,
             "Expect ';' after loop condition.".to_string(),
@@ -165,26 +181,25 @@ impl Parser {
                 stmts: vec![
                     body,
                     Stmt::Expression {
-                        expr: Box::new(increment),
+                        expr: increment,
                     },
                 ],
             };
         }
 
         body = Stmt::While {
-            condition: Box::new(condition.unwrap_or(Expr::Literal {
+            condition: condition.unwrap_or(Expr::Literal {
                 value: Token::new(
                     TokenType::TRUE,
                     "true".to_string(),
                     self.view_prev().clone().unwrap().line,
                 ),
-            })),
+            }),
             body: Box::new(body),
         };
 
         Ok(body)
     }
-
 
     fn expression_statement(&mut self) -> Result<Stmt, ParserError> {
         let expr = self.parse_expr()?;
@@ -193,7 +208,7 @@ impl Parser {
             "Expect ';' after expression.".to_string(),
         )?;
         Ok(Stmt::Expression {
-            expr: Box::new(expr),
+            expr,
         })
     }
 
@@ -273,7 +288,7 @@ impl Parser {
             TokenType::LEFT_BRACE,
             "Expect '{' before function body.".to_string(),
         )?;
-        
+
         let mut body = self.block()?;
         Ok(Stmt::Function { name, params, body })
     }
@@ -326,7 +341,7 @@ impl Parser {
         if self.check_type(token_type) {
             return Ok(self.advance().unwrap());
         }
-        
+
         self.error_count += 1;
         Err(ParserError::UnexpectedToken(
             self.view_prev().unwrap().line,
@@ -400,12 +415,10 @@ impl Parser {
                             expr: Box::new(unwrapped_expr),
                         });
                     }
-                    
-
                 }
                 TokenType::IDENTIFIER => {
                     let token = self.advance().unwrap();
-                    Ok(Expr::Variable { name: token })   
+                    Ok(Expr::Variable { name: token })
                 }
                 _ => {
                     self.error_count += 1;
@@ -437,13 +450,13 @@ impl Parser {
         }
         Ok(expr)
     }
-    
+
     fn parse_assign(&mut self) -> Result<Expr, ParserError> {
         let expr: Expr = self.parse_or()?;
         if self.match_token(TokenType::EQUAL) {
-            let eq : Token = self.view_prev().clone().unwrap();
+            let eq: Token = self.view_prev().clone().unwrap();
             let value: Expr = self.parse_assign()?;
-            
+
             if let Expr::Variable { name } = expr {
                 return Ok(Expr::Assign {
                     name,
@@ -459,7 +472,7 @@ impl Parser {
         }
         Ok(expr)
     }
-    
+
     fn parse_or(&mut self) -> Result<Expr, ParserError> {
         let mut expr: Expr = self.parse_and()?;
         while self.match_token(TokenType::OR) {
@@ -473,7 +486,7 @@ impl Parser {
         }
         Ok(expr)
     }
-    
+
     fn parse_and(&mut self) -> Result<Expr, ParserError> {
         let mut expr: Expr = self.parse_equality()?;
         while self.match_token(TokenType::AND) {
@@ -545,6 +558,46 @@ impl Parser {
                 value: Box::new(right),
             });
         }
-        return self.parse_expr_primary();
+        return self.parse_call();
+    }
+
+    fn parse_call(&mut self) -> Result<Expr, ParserError> {
+        let mut expr: Expr = self.parse_expr_primary()?;
+        loop {
+            if self.match_token(TokenType::LEFT_PAREN) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, expr: Expr) -> Result<Expr, ParserError> {
+        let mut arguments: Vec<Expr> = Vec::new();
+        if !self.check_type(TokenType::RIGHT_PAREN) {
+            loop {
+                if arguments.len() >= 255 {
+                    self.error_count += 1;
+                    return Err(ParserError::FunctionError(
+                        self.view_prev().unwrap().line,
+                        "Too many arguments".to_string(),
+                    ));
+                }
+                arguments.push(self.parse_expr()?);
+                if !self.match_token(TokenType::COMMA) {
+                    break;
+                }
+            }
+        }
+        let paren = self.consume(
+            TokenType::RIGHT_PAREN,
+            "Expected ')' after arguments".to_string(),
+        )?;
+        return Ok(Expr::Call {
+            callee: Box::new(expr),
+            paren,
+            arguments,
+        });
     }
 }

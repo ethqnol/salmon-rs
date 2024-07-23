@@ -8,7 +8,7 @@ pub enum Stmt {
     },
     
     Expression {
-        expr: Box<Expr>,
+        expr: Expr,
     },
     
     Class {
@@ -23,13 +23,13 @@ pub enum Stmt {
     },
     
     If {
-        condition: Box<Expr>,
+        condition: Expr,
         then_branch: Box<Stmt>,
         else_branch: Option<Box<Stmt>>,
     },
     
     Print {
-        expr: Box<Expr>,
+        expr: Expr,
     },
     
     Return {
@@ -43,25 +43,25 @@ pub enum Stmt {
     },
     
     While {
-        condition: Box<Expr>,
+        condition: Expr,
         body: Box<Stmt>,
     },
 }
 
 pub trait Visitor<R> {
     fn visit_block(&mut self, stmts: &Vec<Stmt>) -> R;
-    fn visit_expression(&mut self, expr: &Box<Expr>) -> R;
+    fn visit_expression(&mut self, expr: &Expr) -> R;
     fn visit_class(&mut self, name: &Token, methods: &Vec<Stmt>) -> R;
     fn visit_function(&mut self, name: &Token, params: &Vec<Token>, body: &Vec<Stmt>) -> R;
-    fn visit_if(&mut self, condition: &Box<Expr>, then_branch: &Box<Stmt>, else_branch: &Option<Box<Stmt>>) -> R;
-    fn visit_print(&mut self, expr: &Box<Expr>) -> R;
+    fn visit_if(&mut self, condition: &Expr, then_branch: &Stmt, else_branch: &Option<Box<Stmt>>) -> R;
+    fn visit_print(&mut self, expr: &Expr) -> R;
     fn visit_return(&mut self, keyword: &Token, value: &Option<Expr>) -> R;
     fn visit_var(&mut self, name: &Token, initializer: &Option<Expr>) -> R;
-    fn visit_while(&mut self, condition: &Box<Expr>, body: &Box<Stmt>) -> R;
+    fn visit_while(&mut self, condition: &Expr, body: &Stmt) -> R;
 }
 
 impl Stmt {
-    pub fn accept<R>(&mut self, visitor: &mut impl Visitor<R>) -> R {
+    pub fn accept<R>(&self, visitor: &mut impl Visitor<R>) -> R {
         match self {
             Stmt::Block { stmts } => visitor.visit_block(stmts),
             Stmt::Expression { expr } => visitor.visit_expression(expr),

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::token::Token;
+use crate::{object::Object, token::Token};
 
 pub mod error {
     pub fn report_error(loc: usize, message: &str) {
@@ -14,15 +14,17 @@ pub enum ParserError {
     UnexpectedToken(usize, String),
     InvalidExpression(usize, String),
     UnexpectedEndOfFile,
+    FunctionError(usize, String),
 }
 
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ParserError::UnmatchedParens(line, loc) => write!(f, "[line {}] ParserError: Unmatched Parentheses at {}", line, loc),
-            ParserError::UnexpectedToken(line, loc) => write!(f, "[line {}] ParserError: Unexpected Token at {}", line, loc),
-            ParserError::InvalidExpression(line, loc) => write!(f, "[line {}] ParserError: Invalid Expression at {}", line, loc),
+            ParserError::UnmatchedParens(line, loc) => write!(f, "[line {}] ParserError: Unmatched Parentheses at token: {}", line, loc),
+            ParserError::UnexpectedToken(line, msg) => write!(f, "[line {}] ParserError: Unexpected Token; {}", line, msg),
+            ParserError::InvalidExpression(line, loc) => write!(f, "[line {}] ParserError: Invalid Expression at token: {}", line, loc),
             ParserError::UnexpectedEndOfFile => write!(f, "ParserError: Unexpected End of File"),
+            ParserError::FunctionError(line, loc) => write!(f, "[line {}] ParserError: Function Error at {}", line, loc),
         }
     }
 }
@@ -37,7 +39,7 @@ pub enum RuntimeError {
     InvalidLiteral(Token, String),
     InvalidLogicalOperation(Token, String),
     InvalidFunctionCall(Token, String),
-    
+    Return(Object),
 }
 
 impl fmt::Display for RuntimeError {
@@ -50,6 +52,7 @@ impl fmt::Display for RuntimeError {
             RuntimeError::InvalidLiteral(token, msg) => write!(f, "RuntimeError: Invalid Literal at {}. {}", token.lexeme, msg),
             RuntimeError::InvalidLogicalOperation(token, msg) => write!(f, "RuntimeError: Invalid Logical Operation at {}. {}", token.lexeme, msg),
             RuntimeError::InvalidFunctionCall(token, msg) => write!(f, "RuntimeError: Invalid Function Call at {}. {}", token.lexeme, msg),
+            RuntimeError::Return(object) => write!(f, "Return {:?}", object),
         }
     }
 }

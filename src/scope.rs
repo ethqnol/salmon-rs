@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use crate::{error::RuntimeError, object::Object, token::Token};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 #[derive(Debug, Clone)]
 pub struct Scope {
-    parent: Option<Box<Scope>>,
+    parent: Option<Rc<RefCell<Scope>>>,
     values: HashMap<String, Object>,
 }
 
@@ -11,6 +13,13 @@ impl Scope {
     pub fn new() -> Scope {
         Scope {
             parent: None,
+            values: HashMap::new(),
+        }
+    }
+    
+    pub fn from(parent : &Rc<RefCell<Scope>>) -> Scope {
+        Scope {
+            parent: Some(Rc::clone(parent)),
             values: HashMap::new(),
         }
     }
@@ -23,7 +32,7 @@ impl Scope {
         match self.values.get(&name.lexeme) {
             Some(value) => Ok((*value).clone()),
             None => match &self.parent {
-                Some(parent) => parent.get(name),
+                Some(parent) => parent.borrow().get(name),
                 None => Err(RuntimeError::UndefinedVariable((*name).clone())),
             },
         }
@@ -35,7 +44,7 @@ impl Scope {
             return Ok(());
         } else {
             match &mut self.parent {
-                Some(parent) => parent.assign(name, value),
+                Some(parent) => parent.borrow_mut().assign(name, value),
                 None => { return Err(RuntimeError::UndefinedVariable((*name).clone())); }
             }
             
